@@ -22,6 +22,7 @@
 #include "qgsmapcanvas.h"
 #include "qgisapp.h"
 #include "qgs3dmapsettings.h"
+#include "qgs3dmapcanvasdockwidget.h"
 
 
 Qgs3DMeasureDialog::Qgs3DMeasureDialog( Qgs3DMapToolMeasureLine *tool, Qt::WindowFlags f )
@@ -166,6 +167,20 @@ void Qgs3DMeasureDialog::closeEvent( QCloseEvent *e )
 {
   reject();
   e->accept();
+
+  // select camera control (hand tool)
+  const QList< Qgs3DMapCanvasDockWidget * > widgets = QgisApp::instance()->findChildren< Qgs3DMapCanvasDockWidget * >();
+  Qgs3DMapCanvasDockWidget *canvasDockWidget = nullptr;
+  for ( Qgs3DMapCanvasDockWidget *dock : widgets )
+  {
+    if ( dock->mapCanvas3D()->mapTool() == this->mTool )
+    {
+      canvasDockWidget = dock;
+      break;
+    }
+  }
+  if ( canvasDockWidget != nullptr )
+    canvasDockWidget->selectCameraControl();
 }
 
 void Qgs3DMeasureDialog::updateSettings()

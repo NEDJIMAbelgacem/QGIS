@@ -51,6 +51,8 @@ class APP_EXPORT Qgs3DMapCanvasDockWidget : public QgsDockWidget
 
     Qgs3DMapToolMeasureLine *measurementLineTool() { return  mMapToolMeasureLine; }
 
+    void selectCameraControl();
+
   private slots:
     void resetView();
     void configure();
@@ -79,6 +81,8 @@ class APP_EXPORT Qgs3DMapCanvasDockWidget : public QgsDockWidget
     QMenu *mMapThemeMenu = nullptr;
     QList<QAction *> mMapThemeMenuPresetActions;
     QToolButton *mBtnMapThemes = nullptr;
+    QActionGroup *mMapToolActionsGroup = nullptr;
+    QAction *mCameraControlAction = nullptr;
 };
 
 #endif // QGS3DMAPCANVASDOCKWIDGET_H

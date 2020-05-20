@@ -85,12 +85,13 @@ Qgs3DMapCanvasDockWidget::Qgs3DMapCanvasDockWidget( QWidget *parent )
   actionMeasurementTool->setCheckable( true );
 
   // Create action group to make the action exclusive
-  QActionGroup *actionGroup = new QActionGroup( this );
-  actionGroup->addAction( actionCameraControl );
-  actionGroup->addAction( actionIdentify );
-  actionGroup->addAction( actionMeasurementTool );
-  actionGroup->setExclusive( true );
+  mMapToolActionsGroup = new QActionGroup( this );
+  mMapToolActionsGroup->addAction( actionCameraControl );
+  mMapToolActionsGroup->addAction( actionIdentify );
+  mMapToolActionsGroup->addAction( actionMeasurementTool );
+  mMapToolActionsGroup->setExclusive( true );
   actionCameraControl->setChecked( true );
+  mCameraControlAction = actionCameraControl;
 
   QAction *actionAnim = toolBar->addAction( QIcon( QgsApplication::iconPath( "mTaskRunning.svg" ) ),
                         tr( "Animations" ), this, &Qgs3DMapCanvasDockWidget::toggleAnimations );
@@ -353,4 +354,10 @@ void Qgs3DMapCanvasDockWidget::currentMapThemeRenamed( const QString &theme, con
   {
     mCanvas->map()->setTerrainMapTheme( newTheme );
   }
+}
+
+void Qgs3DMapCanvasDockWidget::selectCameraControl()
+{
+  mCameraControlAction->toggle();
+  mCanvas->setMapTool( nullptr );
 }
