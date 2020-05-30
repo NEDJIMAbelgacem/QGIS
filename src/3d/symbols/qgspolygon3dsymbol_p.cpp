@@ -22,7 +22,13 @@
 #include "qgstessellator.h"
 
 #include <Qt3DCore/QTransform>
+#include <Qt3DRender/QMaterial>
 #include <Qt3DExtras/QPhongMaterial>
+
+#include <Qt3DExtras/QDiffuseMapMaterial>
+#include <Qt3DRender/QAbstractTextureImage>
+#include <Qt3DRender/QTexture>
+
 #include <Qt3DRender/QEffect>
 #include <Qt3DRender/QTechnique>
 #include <Qt3DRender/QCullFace>
@@ -35,7 +41,7 @@
 #include "qgslinevertexdata_p.h"
 #include "qgslinematerial_p.h"
 
-/// @cond PRIVATE
+/// @cond PRIVATEQDiffuseMapMaterial
 
 
 class QgsPolygon3DSymbolHandler : public QgsFeature3DHandler
@@ -60,7 +66,7 @@ class QgsPolygon3DSymbolHandler : public QgsFeature3DHandler
 
     void processPolygon( QgsPolygon *polyClone, QgsFeatureId fid, float height, float extrusionHeight, const Qgs3DRenderContext &context, PolygonData &out );
     void makeEntity( Qt3DCore::QEntity *parent, const Qgs3DRenderContext &context, PolygonData &out, bool selected );
-    Qt3DExtras::QPhongMaterial *material( const QgsPolygon3DSymbol &symbol ) const;
+    Qt3DRender::QMaterial *material( const QgsPolygon3DSymbol &symbol, bool isSelected, const Qgs3DRenderContext &context ) const;
 
     // input specific for this class
     const QgsPolygon3DSymbol &mSymbol;
@@ -80,8 +86,8 @@ bool QgsPolygon3DSymbolHandler::prepare( const Qgs3DRenderContext &context, QSet
   outEdges.withAdjacency = true;
   outEdges.init( mSymbol.altitudeClamping(), mSymbol.altitudeBinding(), mSymbol.height(), &context.map() );
 
-  outNormal.tessellator.reset( new QgsTessellator( context.map().origin().x(), context.map().origin().y(), true, mSymbol.invertNormals(), mSymbol.addBackFaces() ) );
-  outSelected.tessellator.reset( new QgsTessellator( context.map().origin().x(), context.map().origin().y(), true, mSymbol.invertNormals(), mSymbol.addBackFaces() ) );
+  outNormal.tessellator.reset( new QgsTessellator( context.map().origin().x(), context.map().origin().y(), true, mSymbol.invertNormals(), mSymbol.addBackFaces(), mSymbol.material().texturePath() != "" ) );
+  outSelected.tessellator.reset( new QgsTessellator( context.map().origin().x(), context.map().origin().y(), true, mSymbol.invertNormals(), mSymbol.addBackFaces(), mSymbol.material().texturePath() != "" ) );
 
   QSet<QString> attrs = mSymbol.dataDefinedProperties().referencedFields( context.expressionContext() );
   attributeNames.unite( attrs );
@@ -114,7 +120,7 @@ void QgsPolygon3DSymbolHandler::processPolygon( QgsPolygon *polyClone, QgsFeatur
 
   Qgs3DUtils::clampAltitudes( polyClone, mSymbol.altitudeClamping(), mSymbol.altitudeBinding(), height, context.map() );
 
-  Q_ASSERT( out.tessellator->dataVerticesCount() % 3 == 0 );
+  if (mSymbol.material().texturePath() == "") Q_ASSERT( out.tessellator->dataVerticesCount() % 3 == 0 );
   uint startingTriangleIndex = static_cast<uint>( out.tessellator->dataVerticesCount() / 3 );
   out.triangleIndexStartingIndices.append( startingTriangleIndex );
   out.triangleIndexFids.append( fid );
@@ -150,11 +156,13 @@ void QgsPolygon3DSymbolHandler::processFeature( QgsFeature &f, const Qgs3DRender
 
   if ( const QgsPolygon *poly = qgsgeometry_cast< const QgsPolygon *>( g ) )
   {
+    qDebug() << "1";
     QgsPolygon *polyClone = poly->clone();
     processPolygon( polyClone, f.id(), height, extrusionHeight, context, out );
   }
   else if ( const QgsMultiPolygon *mpoly = qgsgeometry_cast< const QgsMultiPolygon *>( g ) )
   {
+    qDebug() << "2";
     for ( int i = 0; i < mpoly->numGeometries(); ++i )
     {
       const QgsAbstractGeometry *g2 = mpoly->geometryN( i );
@@ -165,6 +173,7 @@ void QgsPolygon3DSymbolHandler::processFeature( QgsFeature &f, const Qgs3DRender
   }
   else if ( const QgsGeometryCollection *gc = qgsgeometry_cast< const QgsGeometryCollection *>( g ) )
   {
+    qDebug() << "3";
     for ( int i = 0; i < gc->numGeometries(); ++i )
     {
       const QgsAbstractGeometry *g2 = gc->geometryN( i );
@@ -219,21 +228,16 @@ void QgsPolygon3DSymbolHandler::makeEntity( Qt3DCore::QEntity *parent, const Qgs
   if ( out.tessellator->dataVerticesCount() == 0 )
     return;  // nothing to show - no need to create the entity
 
-  Qt3DExtras::QPhongMaterial *mat = material( mSymbol );
-  if ( selected )
-  {
-    // update the material with selection colors
-    mat->setDiffuse( context.map().selectionColor() );
-    mat->setAmbient( context.map().selectionColor().darker() );
-  }
+  Qt3DRender::QMaterial *mat = material( mSymbol, selected, context );
 
   // extract vertex buffer data from tessellator
   QByteArray data( ( const char * )out.tessellator->data().constData(), out.tessellator->data().count() * sizeof( float ) );
   int nVerts = data.count() / out.tessellator->stride();
 
-  QgsTessellatedPolygonGeometry *geometry = new QgsTessellatedPolygonGeometry;
+  QgsTessellatedPolygonGeometry *geometry = new QgsTessellatedPolygonGeometry(false, mSymbol.addBackFaces(), mSymbol.material().texturePath() != "");
   geometry->setInvertNormals( mSymbol.invertNormals() );
   geometry->setAddBackFaces( mSymbol.addBackFaces() );
+  geometry->setAddTextureCoords( mSymbol.material().texturePath() != "" );
   geometry->setData( data, nVerts, out.triangleIndexFids, out.triangleIndexStartingIndices );
 
   Qt3DRender::QGeometryRenderer *renderer = new Qt3DRender::QGeometryRenderer;
@@ -252,6 +256,7 @@ void QgsPolygon3DSymbolHandler::makeEntity( Qt3DCore::QEntity *parent, const Qgs
 
 static Qt3DRender::QCullFace::CullingMode _qt3DcullingMode( Qgs3DTypes::CullingMode mode )
 {
+  qDebug() << __FILE__ << ":" << __PRETTY_FUNCTION__ << ":" << __LINE__;
   switch ( mode )
   {
     case Qgs3DTypes::NoCulling:    return Qt3DRender::QCullFace::NoCulling;
@@ -262,28 +267,96 @@ static Qt3DRender::QCullFace::CullingMode _qt3DcullingMode( Qgs3DTypes::CullingM
   return Qt3DRender::QCullFace::NoCulling;
 }
 
-Qt3DExtras::QPhongMaterial *QgsPolygon3DSymbolHandler::material( const QgsPolygon3DSymbol &symbol ) const
+Qt3DRender::QMaterial *QgsPolygon3DSymbolHandler::material( const QgsPolygon3DSymbol &symbol, bool isSelected, const Qgs3DRenderContext &context ) const
 {
-  Qt3DExtras::QPhongMaterial *material = new Qt3DExtras::QPhongMaterial;
+  qDebug() << __FILE__ << ":" << __PRETTY_FUNCTION__ << ":" << __LINE__;
+  Qt3DRender::QMaterial *retMaterial = nullptr;
+  QString texture_file_path = symbol.material().texturePath();
+  if (texture_file_path != "") {
+    Qt3DExtras::QDiffuseMapMaterial* material = new Qt3DExtras::QDiffuseMapMaterial;
 
-  // front/back side culling
-  auto techniques = material->effect()->techniques();
-  for ( auto tit = techniques.constBegin(); tit != techniques.constEnd(); ++tit )
-  {
-    auto renderPasses = ( *tit )->renderPasses();
-    for ( auto rpit = renderPasses.begin(); rpit != renderPasses.end(); ++rpit )
+    // front/back side culling
+    auto techniques = material->effect()->techniques();
+    for ( auto tit = techniques.constBegin(); tit != techniques.constEnd(); ++tit )
     {
-      Qt3DRender::QCullFace *cullFace = new Qt3DRender::QCullFace;
-      cullFace->setMode( _qt3DcullingMode( symbol.cullingMode() ) );
-      ( *rpit )->addRenderState( cullFace );
+      auto renderPasses = ( *tit )->renderPasses();
+      for ( auto rpit = renderPasses.begin(); rpit != renderPasses.end(); ++rpit )
+      {
+        Qt3DRender::QCullFace *cullFace = new Qt3DRender::QCullFace;
+        cullFace->setMode( _qt3DcullingMode( symbol.cullingMode() ) );
+        ( *rpit )->addRenderState( cullFace );
+      }
     }
+//    Qt3DRender::QTexture2D* texture = new Qt3DRender::QTexture2D(material);
+    Qt3DRender::QTextureImage* textureImage = new Qt3DRender::QTextureImage;
+
+//    textureImage->setMirrored(!textureImage->isMirrored());
+
+    textureImage->setSource( QUrl::fromLocalFile( texture_file_path ) );
+//    texture->addTextureImage(textureImage);
+//    qDebug() << "Texture layers : " << texture->layers();
+//    texture->setLayers(1);
+//    qDebug() << "Texture status : " << texture->status();
+//    texture->setMagnificationFilter( Qt3DRender::QTexture2D::Filter::Linear )
+//    texture->setFormat(Qt3DRender::QTexture2D::RGB8U);
+
+//    material->setAmbient( symbol.material().ambient() );
+  //  material->setDiffuse( symbol.material().diffuse() );
+//    material->setDiffuse(texture);
+//    textureImage->setMirrored(true);
+    material->diffuse()->addTextureImage(textureImage);
+//    material->diffuse()->setWidth(100);
+//    material->diffuse()->setHeight(100);
+//    material->setTextureScale(100.0);
+    qDebug() << "Wrap mode : " << material->diffuse()->wrapMode();
+    material->diffuse()->wrapMode()->setX(Qt3DRender::QTextureWrapMode::MirroredRepeat);
+    material->diffuse()->wrapMode()->setY(Qt3DRender::QTextureWrapMode::MirroredRepeat);
+    material->diffuse()->wrapMode()->setZ(Qt3DRender::QTextureWrapMode::MirroredRepeat);
+//    material->diffuse()->wrapMode()->setZ(Qt3DRender::QTextureWrapMode::Repeat);
+    material->setSpecular( symbol.material().specular() );
+    material->setShininess( symbol.material().shininess() );
+
+    if ( isSelected )
+    {
+      // update the material with selection colors
+  //    mat->setDiffuse( context.map().selectionColor() );
+//      material->setAmbient( context.map().selectionColor().darker() );
+    }
+
+    retMaterial = material;
+
+  } else {
+
+    Qt3DExtras::QPhongMaterial* material = new Qt3DExtras::QPhongMaterial;
+
+    // front/back side culling
+    auto techniques = material->effect()->techniques();
+    for ( auto tit = techniques.constBegin(); tit != techniques.constEnd(); ++tit )
+    {
+      auto renderPasses = ( *tit )->renderPasses();
+      for ( auto rpit = renderPasses.begin(); rpit != renderPasses.end(); ++rpit )
+      {
+        Qt3DRender::QCullFace *cullFace = new Qt3DRender::QCullFace;
+        cullFace->setMode( _qt3DcullingMode( symbol.cullingMode() ) );
+        ( *rpit )->addRenderState( cullFace );
+      }
+    }
+
+    material->setAmbient( symbol.material().ambient() );
+    material->setDiffuse( symbol.material().diffuse() );
+    material->setSpecular( symbol.material().specular() );
+    material->setShininess( symbol.material().shininess() );
+
+    if ( isSelected )
+    {
+      // update the material with selection colors
+      material->setDiffuse( context.map().selectionColor() );
+      material->setAmbient( context.map().selectionColor().darker() );
+    }
+    retMaterial = material;
   }
 
-  material->setAmbient( symbol.material().ambient() );
-  material->setDiffuse( symbol.material().diffuse() );
-  material->setSpecular( symbol.material().specular() );
-  material->setShininess( symbol.material().shininess() );
-  return material;
+  return retMaterial;
 }
 
 

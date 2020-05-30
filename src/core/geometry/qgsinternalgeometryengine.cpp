@@ -1049,7 +1049,7 @@ QVector<QgsPointXY> QgsInternalGeometryEngine::randomPointsInPolygon( const QgsG
 
   // step 1 - tessellate the polygon to triangles
   QgsRectangle bounds = polygon.boundingBox();
-  QgsTessellator t( bounds, false, false, false, true );
+  QgsTessellator t( bounds, false, false, false, false, true );
 
   if ( polygon.isMultipart() )
   {
@@ -1104,6 +1104,7 @@ QVector<QgsPointXY> QgsInternalGeometryEngine::randomPointsInPolygon( const QgsG
     const float aY = -( *it++ );
     const float bX = *it++;
     ( void )it++; // z
+
     const float bY = -( *it++ );
     const float cX = *it++;
     ( void )it++; // z
@@ -1113,6 +1114,7 @@ QVector<QgsPointXY> QgsInternalGeometryEngine::randomPointsInPolygon( const QgsG
     totalArea += area;
     cumulativeAreas.emplace_back( totalArea );
   }
+
 
   std::random_device rd;
   std::mt19937 mt( seed == 0 ? rd() : seed );

@@ -40,7 +40,7 @@ class QgsTessellatedPolygonGeometry : public Qt3DRender::QGeometry
     Q_OBJECT
   public:
     //! Constructor
-    QgsTessellatedPolygonGeometry( QNode *parent = nullptr );
+    QgsTessellatedPolygonGeometry( bool invertNormals, bool addBackFaces, bool addTextureCoords, QNode *parent = nullptr );
 
     //! Returns whether the normals of triangles will be inverted (useful for fixing clockwise / counter-clockwise face vertex orders)
     bool invertNormals() const { return mInvertNormals; }
@@ -58,6 +58,8 @@ class QgsTessellatedPolygonGeometry : public Qt3DRender::QGeometry
      * \since QGIS 3.2
      */
     void setAddBackFaces( bool add ) { mAddBackFaces = add; }
+
+    void setAddTextureCoords( bool add ) { mAddTextureCoords = add; }
 
     //! Initializes vertex buffer from given polygons. Takes ownership of passed polygon geometries
     void setPolygons( const QList<QgsPolygon *> &polygons, const QList<QgsFeatureId> &featureIds, const QgsPointXY &origin, float extrusionHeight, const QList<float> &extrusionHeightPerPolygon = QList<float>() );
@@ -79,6 +81,7 @@ class QgsTessellatedPolygonGeometry : public Qt3DRender::QGeometry
 
     Qt3DRender::QAttribute *mPositionAttribute = nullptr;
     Qt3DRender::QAttribute *mNormalAttribute = nullptr;
+    Qt3DRender::QAttribute *mTextureCoordsAttribute = nullptr;
     Qt3DRender::QBuffer *mVertexBuffer = nullptr;
 
     QVector<QgsFeatureId> mTriangleIndexFids;
@@ -87,6 +90,7 @@ class QgsTessellatedPolygonGeometry : public Qt3DRender::QGeometry
     bool mWithNormals = true;
     bool mInvertNormals = false;
     bool mAddBackFaces = false;
+    bool mAddTextureCoords = false;
 };
 
 #endif // QGSTESSELLATEDPOLYGONGEOMETRY_H

@@ -29,6 +29,7 @@ QgsPhongMaterialWidget::QgsPhongMaterialWidget( QWidget *parent )
   connect( btnAmbient, &QgsColorButton::colorChanged, this, &QgsPhongMaterialWidget::changed );
   connect( btnSpecular, &QgsColorButton::colorChanged, this, &QgsPhongMaterialWidget::changed );
   connect( spinShininess, static_cast<void ( QDoubleSpinBox::* )( double )>( &QDoubleSpinBox::valueChanged ), this, &QgsPhongMaterialWidget::changed );
+  connect( textureFile, &QgsFileWidget::fileChanged, this, &QgsPhongMaterialWidget::changed );
 }
 
 void QgsPhongMaterialWidget::setDiffuseVisible( bool visible )
@@ -48,6 +49,7 @@ void QgsPhongMaterialWidget::setMaterial( const QgsPhongMaterialSettings &materi
   btnAmbient->setColor( material.ambient() );
   btnSpecular->setColor( material.specular() );
   spinShininess->setValue( material.shininess() );
+  textureFile->setFilePath( material.texturePath() );
 }
 
 QgsPhongMaterialSettings QgsPhongMaterialWidget::material() const
@@ -57,5 +59,6 @@ QgsPhongMaterialSettings QgsPhongMaterialWidget::material() const
   m.setAmbient( btnAmbient->color() );
   m.setSpecular( btnSpecular->color() );
   m.setShininess( spinShininess->value() );
+  m.setTexturePath( textureFile->filePath() );
   return m;
 }
