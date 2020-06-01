@@ -15,21 +15,24 @@
 
 #include "qgsphongmaterialwidget.h"
 
-#include "qgsphongmaterialsettings.h"
+#include "qgsmaterialsettings.h"
 
 
 QgsPhongMaterialWidget::QgsPhongMaterialWidget( QWidget *parent )
   : QWidget( parent )
 {
   setupUi( this );
+  cbxMaterialType->addItem("Flat colors");
+  cbxMaterialType->addItem("Diffuse texture");
 
-  setMaterial( QgsPhongMaterialSettings() );
+  setMaterial( QgsMaterialSettings() );
 
   connect( btnDiffuse, &QgsColorButton::colorChanged, this, &QgsPhongMaterialWidget::changed );
   connect( btnAmbient, &QgsColorButton::colorChanged, this, &QgsPhongMaterialWidget::changed );
   connect( btnSpecular, &QgsColorButton::colorChanged, this, &QgsPhongMaterialWidget::changed );
   connect( spinShininess, static_cast<void ( QDoubleSpinBox::* )( double )>( &QDoubleSpinBox::valueChanged ), this, &QgsPhongMaterialWidget::changed );
   connect( textureFile, &QgsFileWidget::fileChanged, this, &QgsPhongMaterialWidget::changed );
+  connect( cbxMaterialType, &QComboBox::currentTextChanged, this, &QgsPhongMaterialWidget::changed );
 }
 
 void QgsPhongMaterialWidget::setDiffuseVisible( bool visible )
@@ -43,18 +46,31 @@ bool QgsPhongMaterialWidget::isDiffuseVisible() const
   return btnDiffuse->isVisible();
 }
 
-void QgsPhongMaterialWidget::setMaterial( const QgsPhongMaterialSettings &material )
+void QgsPhongMaterialWidget::setMaterial( const QgsMaterialSettings &material )
 {
   btnDiffuse->setColor( material.diffuse() );
   btnAmbient->setColor( material.ambient() );
   btnSpecular->setColor( material.specular() );
   spinShininess->setValue( material.shininess() );
   textureFile->setFilePath( material.texturePath() );
+  switch (material.materialType()) {
+  case QgsMaterialSettings::FLAT_COLORS:
+    cbxMaterialType->setCurrentIndex(0);
+    break;
+  case QgsMaterialSettings::DIFFUSE_TEXTURE:
+    cbxMaterialType->setCurrentIndex(1);
+    break;
+  default:
+    cbxMaterialType->setCurrentIndex(0);
+    break;
+  }
 }
 
-QgsPhongMaterialSettings QgsPhongMaterialWidget::material() const
+QgsMaterialSettings QgsPhongMaterialWidget::material() const
 {
-  QgsPhongMaterialSettings m;
+  QgsMaterialSettings m;
+  if (cbxMaterialType->currentIndex() == 0) m.setMaterialType(QgsMaterialSettings::FLAT_COLORS);
+  else if (cbxMaterialType->currentIndex() == 1) m.setMaterialType(QgsMaterialSettings::DIFFUSE_TEXTURE);
   m.setDiffuse( btnDiffuse->color() );
   m.setAmbient( btnAmbient->color() );
   m.setSpecular( btnSpecular->color() );

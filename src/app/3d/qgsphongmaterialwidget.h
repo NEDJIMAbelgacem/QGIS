@@ -20,7 +20,7 @@
 
 #include <ui_phongmaterialwidget.h>
 
-class QgsPhongMaterialSettings;
+class QgsMaterialSettings;
 
 
 //! Widget for configuration of Phong material settings
@@ -33,8 +33,8 @@ class QgsPhongMaterialWidget : public QWidget, private Ui::PhongMaterialWidget
     void setDiffuseVisible( bool visible );
     bool isDiffuseVisible() const;
 
-    void setMaterial( const QgsPhongMaterialSettings &material );
-    QgsPhongMaterialSettings material() const;
+    void setMaterial( const QgsMaterialSettings &material );
+    QgsMaterialSettings material() const;
 
   signals:
     void changed();

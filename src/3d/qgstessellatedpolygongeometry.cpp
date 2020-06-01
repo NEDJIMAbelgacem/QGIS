@@ -69,7 +69,7 @@ QgsTessellatedPolygonGeometry::QgsTessellatedPolygonGeometry( bool _invertNormal
     mTextureCoordsAttribute->setAttributeType( Qt3DRender::QAttribute::VertexAttribute );
     mTextureCoordsAttribute->setBuffer( mVertexBuffer );
     mTextureCoordsAttribute->setByteStride( stride );
-    mTextureCoordsAttribute->setByteOffset( 2 * sizeof( float ) );
+    mTextureCoordsAttribute->setByteOffset( 6 * sizeof( float ) );
     addAttribute( mTextureCoordsAttribute );
   }
 }

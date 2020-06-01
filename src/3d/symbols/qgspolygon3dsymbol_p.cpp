@@ -287,34 +287,19 @@ Qt3DRender::QMaterial *QgsPolygon3DSymbolHandler::material( const QgsPolygon3DSy
         ( *rpit )->addRenderState( cullFace );
       }
     }
-//    Qt3DRender::QTexture2D* texture = new Qt3DRender::QTexture2D(material);
     Qt3DRender::QTextureImage* textureImage = new Qt3DRender::QTextureImage;
-
-//    textureImage->setMirrored(!textureImage->isMirrored());
-
     textureImage->setSource( QUrl::fromLocalFile( texture_file_path ) );
-//    texture->addTextureImage(textureImage);
-//    qDebug() << "Texture layers : " << texture->layers();
-//    texture->setLayers(1);
-//    qDebug() << "Texture status : " << texture->status();
-//    texture->setMagnificationFilter( Qt3DRender::QTexture2D::Filter::Linear )
-//    texture->setFormat(Qt3DRender::QTexture2D::RGB8U);
-
-//    material->setAmbient( symbol.material().ambient() );
-  //  material->setDiffuse( symbol.material().diffuse() );
-//    material->setDiffuse(texture);
-//    textureImage->setMirrored(true);
     material->diffuse()->addTextureImage(textureImage);
 //    material->diffuse()->setWidth(100);
 //    material->diffuse()->setHeight(100);
-//    material->setTextureScale(100.0);
+    material->setTextureScale(0.05);
     qDebug() << "Wrap mode : " << material->diffuse()->wrapMode();
-    material->diffuse()->wrapMode()->setX(Qt3DRender::QTextureWrapMode::MirroredRepeat);
-    material->diffuse()->wrapMode()->setY(Qt3DRender::QTextureWrapMode::MirroredRepeat);
-    material->diffuse()->wrapMode()->setZ(Qt3DRender::QTextureWrapMode::MirroredRepeat);
-//    material->diffuse()->wrapMode()->setZ(Qt3DRender::QTextureWrapMode::Repeat);
+    material->diffuse()->wrapMode()->setX(Qt3DRender::QTextureWrapMode::Repeat);
+    material->diffuse()->wrapMode()->setY(Qt3DRender::QTextureWrapMode::Repeat);
+    material->diffuse()->wrapMode()->setZ(Qt3DRender::QTextureWrapMode::Repeat);
     material->setSpecular( symbol.material().specular() );
     material->setShininess( symbol.material().shininess() );
+    material->setAmbient( symbol.material().ambient() );
 
     if ( isSelected )
     {

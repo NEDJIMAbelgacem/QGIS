@@ -1,20 +1,5 @@
-/***************************************************************************
-  qgsphongmaterialsettings.h
-  --------------------------------------
-  Date                 : July 2017
-  Copyright            : (C) 2017 by Martin Dobias
-  Email                : wonder dot sk at gmail dot com
- ***************************************************************************
- *                                                                         *
- *   This program is free software; you can redistribute it and/or modify  *
- *   it under the terms of the GNU General Public License as published by  *
- *   the Free Software Foundation; either version 2 of the License, or     *
- *   (at your option) any later version.                                   *
- *                                                                         *
- ***************************************************************************/
-
-#ifndef QGSPHONGMATERIALSETTINGS_H
-#define QGSPHONGMATERIALSETTINGS_H
+#ifndef QGSMATERIALSETTINGS_H
+#define QGSMATERIALSETTINGS_H
 
 #include "qgis_3d.h"
 
@@ -32,7 +17,7 @@ class QDomElement;
  *
  * \since QGIS 3.0
  */
-class _3D_EXPORT QgsPhongMaterialSettings
+class _3D_EXPORT QgsMaterialSettings
 {
   public:
   enum QgsMaterialType {
@@ -40,14 +25,17 @@ class _3D_EXPORT QgsPhongMaterialSettings
     DIFFUSE_TEXTURE
   };
   public:
-    QgsPhongMaterialSettings()
-      : mAmbient( QColor::fromRgbF( 0.1f, 0.1f, 0.1f, 1.0f ) )
+    QgsMaterialSettings()
+      : mMaterialType( QgsMaterialType::FLAT_COLORS )
+      , mAmbient( QColor::fromRgbF( 0.1f, 0.1f, 0.1f, 1.0f ) )
       , mDiffuse( QColor::fromRgbF( 0.7f, 0.7f, 0.7f, 1.0f ) )
       , mSpecular( QColor::fromRgbF( 1.0f, 1.0f, 1.0f, 1.0f ) )
       , mTexturePath("")
     {
     }
 
+    //! Returns the material type
+    QgsMaterialType materialType() const { return mMaterialType; }
     //! Returns ambient color component
     QColor ambient() const { return mAmbient; }
     //! Returns diffuse color component
@@ -59,7 +47,8 @@ class _3D_EXPORT QgsPhongMaterialSettings
     //! Returns shininess of the surface
     QString texturePath() const { return mTexturePath; }
 
-
+    //! Sets the material type
+    void setMaterialType(QgsMaterialType type) { mMaterialType = type; }
     //! Sets ambient color component
     void setAmbient( const QColor &ambient ) { mAmbient = ambient; }
     //! Sets diffuse color component
@@ -76,22 +65,44 @@ class _3D_EXPORT QgsPhongMaterialSettings
     //! Writes settings to a DOM element
     void writeXml( QDomElement &elem ) const;
 
-    bool operator==( const QgsPhongMaterialSettings &other ) const
+    bool operator==( const QgsMaterialSettings &other ) const
     {
       return mAmbient == other.mAmbient &&
              mDiffuse == other.mDiffuse &&
              mSpecular == other.mSpecular &&
              mShininess == other.mShininess &&
+             mMaterialType == other.mMaterialType &&
              mTexturePath == other.mTexturePath;
     }
-
+  private:
+    QString materialTypeToString(QgsMaterialType materialType) const {
+        QString materialTypeStr;
+        switch (materialType) {
+        case QgsMaterialSettings::FLAT_COLORS:
+            materialTypeStr = "FLAT_COLORS";
+            break;
+        case QgsMaterialSettings::DIFFUSE_TEXTURE:
+            materialTypeStr = "DIFFUSE_TEXTURE";
+            break;
+        default:
+            Q_ASSERT(false);
+        }
+        return materialTypeStr;
+    }
+    QgsMaterialType stringToMaterialType(const QString& materialTypeStr) const {
+        QgsMaterialType materialType;
+        if (materialTypeStr == "FLAT_COLORS") materialType = QgsMaterialType::FLAT_COLORS;
+        else if (materialTypeStr == "DIFFUSE_TEXTURE") materialType = QgsMaterialType::DIFFUSE_TEXTURE;
+        else Q_ASSERT(false);
+        return materialType;
+    }
   private:
     QColor mAmbient;
     QColor mDiffuse;
     QColor mSpecular;
     float mShininess = 0.0f;
     QString mTexturePath;
+    QgsMaterialType mMaterialType;
 };
 
-
-#endif // QGSPHONGMATERIALSETTINGS_H
+#endif // QGSMATERIALSETTINGS_H

@@ -33,9 +33,10 @@
 #include <algorithm>
 #include <unordered_set>
 
-
 static void make_quad( float x0, float y0, float z0, float x1, float y1, float z1, float height, QVector<float> &data, bool addNormals, bool addTextureCoords )
 {
+
+
   float dx = x1 - x0;
   float dy = -( y1 - y0 );
 
@@ -50,19 +51,19 @@ static void make_quad( float x0, float y0, float z0, float x1, float y1, float z
   if ( addNormals )
     data << vn.x() << vn.y() << vn.z();
   if ( addTextureCoords )
-    data << 0.0f << 0.0f;//vn.x() << vn.y();
+    data << x0 << z0 + height;
   // vertice 2
   data << x1 << z1 + height << -y1;
   if ( addNormals )
     data << vn.x() << vn.y() << vn.z();
   if ( addTextureCoords )
-    data << 1.0f << 0.0f;//vn.y() << vn.z();
+    data << x1 << z1;
   // verice 3
   data << x0 << z0 << -y0;
   if ( addNormals )
     data << vn.x() << vn.y() << vn.z();
   if ( addTextureCoords )
-    data << 0.5f << 1.0f;//vn.x() << vn.z();
+    data << x0 << z0;
 
   // triangle 2
   // vertice 1
@@ -70,19 +71,19 @@ static void make_quad( float x0, float y0, float z0, float x1, float y1, float z
   if ( addNormals )
     data << vn.x() << vn.y() << vn.z();
   if ( addTextureCoords )
-    data << 0.0f << 0.0f;//vn.x() << vn.y();
+    data << x0 << z0;
   // vertice 2
   data << x1 << z1 + height << -y1;
   if ( addNormals )
     data << vn.x() << vn.y() << vn.z();
   if ( addTextureCoords )
-    data << 1.0f << 0.0f;//vn.y() << vn.z();
+    data << x1 << z1 + height;
   // vertice 3
   data << x1 << z1 << -y1;
   if ( addNormals )
     data << vn.x() << vn.y() << vn.z();
   if ( addTextureCoords )
-    data << 0.5f << 1.0f; //vn.x() << vn.z();
+    data << x1 << z1 + height;
 }
 
 
@@ -104,7 +105,7 @@ QgsTessellator::QgsTessellator( const QgsRectangle &bounds, bool addNormals, boo
   , mAddNormals( addNormals )
   , mInvertNormals( invertNormals )
   , mAddBackFaces( addBackFaces )
-  , mAddTextureCoords (addTextureCoords )
+  , mAddTextureCoords ( addTextureCoords )
   , mNoZ( noZ )
 {
   init();
@@ -458,11 +459,11 @@ void QgsTessellator::addPolygon( const QgsPolygon &polygon, float extrusionHeigh
 
   if ( pCount == 4 && polygon.numInteriorRings() == 0 )
   {
+    qDebug() << "NO TRIANGULATING";
     // polygon is a triangle - write vertices to the output data array without triangulation
     const double *xData = exterior->xData();
     const double *yData = exterior->yData();
     const double *zData = !mNoZ ? exterior->zData() : nullptr;
-    const float texCoordsArr[] = { 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f };
     for ( int i = 0; i < 3; i++ )
     {
       float z = ( !zData ? 0 : *zData );
@@ -475,7 +476,7 @@ void QgsTessellator::addPolygon( const QgsPolygon &polygon, float extrusionHeigh
       if ( mAddNormals )
         mData << pNormal.x() << pNormal.z() << - pNormal.y();
       if ( mAddTextureCoords )
-        mData << texCoordsArr[2 * i] << texCoordsArr[2 * i + 1];
+        mData << *xData << -*yData;
       xData++;
       yData++;
       zData++;
@@ -490,12 +491,13 @@ void QgsTessellator::addPolygon( const QgsPolygon &polygon, float extrusionHeigh
         if ( mAddNormals )
           mData << -pNormal.x() << -pNormal.z() << pNormal.y();
         if ( mAddTextureCoords )
-          mData << texCoordsArr[2 * i] << texCoordsArr[2 * i + 1];
+          mData << exterior->xAt( i ) << - exterior->yAt( i );
       }
     }
   }
   else
   {
+    qDebug() << "TRIANGULATING";
     if ( !mNoZ && !qgsDoubleNear( pNormal.length(), 1, 0.001 ) )
       return;  // this should not happen - pNormal should be normalized to unit length
 
@@ -593,7 +595,6 @@ void QgsTessellator::addPolygon( const QgsPolygon &polygon, float extrusionHeigh
       cdt->Triangulate();
 
       std::vector<p2t::Triangle *> triangles = cdt->GetTriangles();
-      const float texCoordsArr[] = { 0.0f, 0.0f, 1.0f, 0.0f, 0.5f, 1.0f };
 
 //      mData.reserve( mData.size() + triangles.size() * ( ( mAddNormals ? 6 : 3 ) * ( mAddBackFaces ? 2 : 1 ) ) );
       for ( size_t i = 0; i < triangles.size(); ++i )
@@ -618,7 +619,7 @@ void QgsTessellator::addPolygon( const QgsPolygon &polygon, float extrusionHeigh
             mData << pNormal.x() << pNormal.z() << - pNormal.y();
           }
           if ( mAddTextureCoords ) {
-            mData << texCoordsArr[2 * j] << texCoordsArr[2 * j + 1];
+            mData << p->x << p->y;
           }
         }
 
@@ -638,8 +639,7 @@ void QgsTessellator::addPolygon( const QgsPolygon &polygon, float extrusionHeigh
             if ( mAddNormals )
               mData << -pNormal.x() << -pNormal.z() << pNormal.y();
             if ( mAddTextureCoords )
-//              mData << 0.0f << 0.0f;
-              mData << texCoordsArr[2 * j] << texCoordsArr[2 * j + 1];
+              mData << p->x << p->y;
           }
         }
       }
